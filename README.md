@@ -1,2 +1,2 @@
-# 2019Hackathon
-Hackathon Materials
+# The District Developers
+The implementation of renewable energy has been growing rapidly in recent years. As this growth occurs, there is always the task of finding the best places to put solar panels, wind turbines, or hydroelectric dams. Wouldn’t it be nice to have a quick and effective tool that does the heavy lifting for you? That’s where we come in. We plan to create web application using the JavaScript API that does just that. When a bounding box is selected by the user, we will analyze the area within that bounding box to find the places that are most suitable for the implementation of each of these renewable energy sources. The returned output will be the most suitable area for their selected renewable energy source. This will provide a simple tool for planning when considering location in the implementation of renewable energy resources.
