@@ -111,12 +111,13 @@
           top: 120px;
           left: 62px;
           padding: 0 12px 0 12px;
-          background-color: rgba(0, 0, 0, 0.65);
-          color: white;
+          background-color: white;
+          color: black;
+          box-shadow: 2px 2px rgba(71, 71, 71, 0.281);
         }
 
         .floating-box {
-          border-radius: 25px;
+          
           position: absolute;
           bottom: 40px;;
           right: 20px;
@@ -125,11 +126,11 @@
           text-align: center;
 		    font-size: 20px;
           margin-top: 10px;
-          color: white;
-          border: solid 3px white;
-          background-color: rgba(0,0,0,0.65);
+          background-color: white;
+          color: black;
+          box-shadow: 4px 4px rgba(71, 71, 71, 0.281);
           z-index: 10;
-          padding-top: 5px;
+          padding-top: 8px;
         }
           
         .box p {
@@ -174,6 +175,17 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
       <script src="https://js.arcgis.com/4.12/"></script>
       <script>
+         var result = 0;
+          var svi_total = 0;
+          var pop_total = 0;
+          var svi = 0;
+          var count = 0;
+          var liters = 0;
+          var meals = 0;
+          var seek=0;
+          var water=0;
+          var food=0;
+          var exportData=[];
         require([
           "esri/config",
           "esri/widgets/Sketch",
@@ -196,7 +208,9 @@
           "esri/core/watchUtils",
           "esri/tasks/RouteTask",
           "esri/tasks/support/RouteParameters",
-          "esri/tasks/support/FeatureSet"
+          "esri/tasks/support/FeatureSet",
+          "esri/widgets/Print",
+          "esri/WebMap"
         ], function(
           config,
           Sketch,
@@ -219,16 +233,12 @@
           watchUtils,
           RouteTask,
           RouteParameters,
-          FeatureSet
+          FeatureSet,
+          Print,
+          WebMap
         ) {
           // Create layers
-          var result = 0;
-          var svi_total = 0;
-          var pop_total = 0;
-          var svi = 0;
-          var count = 0;
-          var liters = 0;
-          var meals = 0;
+          
           var portalUrl = "https://www.arcgis.com";
           const buffer = new GraphicsLayer();
           var graphicsLayer = new GraphicsLayer();
@@ -240,6 +250,21 @@
           const featureLayer = new FeatureLayer({
             url: "https://services3.arcgis.com/ZvidGQkLaDJxRSJ2/arcgis/rest/services/Overall_2014_Tracts/FeatureServer",
             visible: false
+          });
+          const active = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer/0"
+          });
+          const active2 = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer/1"
+          });
+          const active3 = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer/2"
+          });
+          const active4 = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer/3"
+          });
+          active5 = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Active_Hurricanes_v1/FeatureServer/4"
           });
           var popup = {
           'title': '{NAME}',
@@ -267,15 +292,15 @@
           // Create map
           const map = new Map({
             basemap: "streets-navigation-vector",
-            layers: [featureLayer, buffer, centers, routeLayer]
+            layers: [featureLayer, active5, active3, active4, active, active2, buffer, centers, routeLayer]
           });
   
           // Create view
           const view = new MapView({
             container: "viewDiv",
             map: map,
-            zoom: 6,
-            center: [-91.083, 32.3069]
+            zoom: 4,
+            center: [-97.383, 34.4069]
           });
        
           var fileForm = document.getElementById("mainWindow");
@@ -284,6 +309,19 @@
             expandIconClass: "esri-icon-upload",
             view: view,
             content: fileForm
+          });
+
+          var print = new Expand({
+            id: "Print",
+            view: view,
+            // specify your own print service
+            content:
+             new Print({
+            view: view,
+            // specify your own print service
+            printServiceUrl:
+              "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+          })
           });
 
           view.ui.add(expand, "top-right");
@@ -398,9 +436,8 @@
           // Add a graphic representing the completed polygon
           // when user double-clicks on the view or presses the "C" key
           action.on("draw-complete", function (evt) {
-            
             var graphic = createPolygonGraphic(evt.vertices);
-            sleep(1);
+            sleep(2);
             var category = prompt("What is the category of damage?", "1, 2, 3, 4, or 5")
             category = parseInt(category);
             route(graphic.geometry, category);
@@ -442,22 +479,68 @@
             }
           });
           view.graphics.add(graphic);
-          
           return graphic;
           
         }
-
         
+          // Add widget to the top right corner of the view
+          view.ui.add(print, "top-right");
+
+          view.ui.add("csvDiv", "top-right");
+
+          var args = '{ filename: "export-data.csv" }';
+
+          function convertArrayOfObjectsToCSV(args) {  
+            var result, ctr, keys, columnDelimiter, lineDelimiter, data;
+
+            data = args.data || null;
+            if (data == null || !data.length) {
+                return null;
+            }
+
+            columnDelimiter = args.columnDelimiter || ',';
+            lineDelimiter = args.lineDelimiter || '\n';
+
+            keys = Object.keys(data[0]);
+
+            result = '';
+            result += keys.join(columnDelimiter);
+            result += lineDelimiter;
+
+            data.forEach(function(item) {
+                ctr = 0;
+                keys.forEach(function(key) {
+                    if (ctr > 0) result += columnDelimiter;
+
+                    result += item[key];
+                    ctr++;
+                });
+                result += lineDelimiter;
+            });
+
+            return result;
+        }
+        document.getElementById("csvDiv").onclick = function downloadCSV(args) {  
+            var data, filename, link;
+            var csv = convertArrayOfObjectsToCSV({
+                data: exportData
+            });
+            if (csv == null) return;
+
+            filename = args.filename || 'export.csv';
+
+            if (!csv.match(/^data:text\/csv/i)) {
+                csv = 'data:text/csv;charset=utf-8,' + csv;
+            }
+            data = encodeURI(csv);
+
+            link = document.createElement('a');
+            link.setAttribute('href', data);
+            link.setAttribute('download', filename);
+            link.click();
+        }
 
         function calculation(buffer, category) {
-          html = "<div class='floating-box'><div id='box'><span>Number of people in need: </span><span id='pop'></span></div><div id='box'><span>Liters of water needed: </span><span id='water'></span></div><div id='box'><span>Number of meals needed: </span><span id='meals'></span></div><div id='box'><span>Cost of water: $</span><span id='costw'></span></div><div id='box'><span>Cost of meals: $</span><span id='costm'></span></div><div id='box'><span>Number of miles on route: </span><span id='miles'></div></div>"
-                document.getElementById('html').innerHTML = "Loading...";
-                document.getElementById('pop').innerHTML = "Loading...";
-                document.getElementById('water').innerHTML = "Loading...";
-                document.getElementById('meals').innerHTML = "Loading...";
-                document.getElementById('costw').innerHTML = "Loading...";
-                document.getElementById('costm').innerHTML = "Loading...";
-                document.getElementById('miles').innerHTML = "Loading...";
             const query = featureLayer.createQuery();
             query.geometry = buffer;
             query.outFields = ["E_TOTPOP", "RPL_THEMES"];
@@ -474,7 +557,6 @@
                     count += 1;
                     }
                 }
-                document.body.style.cursor = "wait";
                 var categoryValue = 0;
                 if(category == 1) {
                   categoryValue = 0.15
@@ -490,11 +572,11 @@
                 var svi = svi_total/count;
                 var vul_pop = Math.round(pop_total * categoryValue);
                 var vul_pop = Math.round(vul_pop * svi);
-                var seek = Math.round(0.38 * vul_pop);
+                seek = Math.round(0.38 * vul_pop);
                 liters = Math.round(seek * 9);
                 meals = Math.round(seek * 6);
-                var water = Math.round(liters * 0.97);
-                var food = Math.round(meals * 4.77);
+                water = Math.round(liters * 0.97);
+                food = Math.round(meals * 4.77);
 
                 function formatNumber(num) {
                   return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
@@ -502,19 +584,19 @@
 
                 svi = formatNumber(svi);
                 vul_pop = formatNumber(vul_pop);
-                seek = formatNumber(seek);
+                var seekf = formatNumber(seek);
                 var litersf = formatNumber(liters);
                 var mealsf = formatNumber(meals);
-                water = formatNumber(water);
-                food = formatNumber(food);
-                document.body.style.cursor = "wait";
+                var waterf = formatNumber(water);
+                var foodf = formatNumber(food);
+				
                 html = "<div class='floating-box'><div id='box'><span>Number of people in need: </span><span id='pop'></span></div><div id='box'><span>Liters of water needed: </span><span id='water'></span></div><div id='box'><span>Number of meals needed: </span><span id='meals'></span></div><div id='box'><span>Cost of water: $</span><span id='costw'></span></div><div id='box'><span>Cost of meals: $</span><span id='costm'></span></div><div id='box'><span>Number of miles on route: </span><span id='miles'></div></div>"
                 document.getElementById('html').innerHTML = html;
-                document.getElementById('pop').innerHTML = seek;
+                document.getElementById('pop').innerHTML = seekf;
                 document.getElementById('water').innerHTML = litersf;
                 document.getElementById('meals').innerHTML = mealsf;
-                document.getElementById('costw').innerHTML = water;
-                document.getElementById('costm').innerHTML = food;
+                document.getElementById('costw').innerHTML = waterf;
+                document.getElementById('costm').innerHTML = foodf;
                 document.getElementById('miles').innerHTML = "Loading...";
               });
         }
@@ -525,8 +607,8 @@
           }
 
         function route(buffer, category) {
-          
           calculation(buffer, category);
+          document.body.style.cursor = "wait";
           sleep(5);
           var centroidx = buffer.centroid.latitude;
           var centroidy = buffer.centroid.longitude;
@@ -620,6 +702,32 @@
                         miles = Math.round(miles);
                         document.getElementById('miles').innerHTML = miles;
                         document.body.style.cursor = "default";
+                        exportData = [  
+                          {
+                              Variable: "Population Seeking Shelter",
+                              Value: seek
+                          },
+                          {
+                            Variable: "Liters of water needed",
+                            Value: liters
+                          },
+                          {
+                            Variable: "Number of meals needed",
+                            Value: meals
+                          },
+                          {
+                            Variable: "Cost of water",
+                            Value: water,
+                          },
+                          {
+                            Variable: "Cost of food",
+                            Value: food
+                          },
+                          {
+                            Variable: "Miles of Travel",
+                            Value: miles
+                          },
+                      ];
                       }
                     }
                   });
@@ -637,7 +745,6 @@
       <ul>
         <li><a href="https://www.fema.gov/"><img src="https://upload.wikimedia.org/wikipedia/commons/6/67/FEMA_logo.svg" height="78.75" width="222.1875"/></a></li>
         <li><h2>ESF DECISION SUPPORT TOOLS</h2></li>
-      
         <div class="dropdown">
             <button class="dropbtn">Tools 
               <i class="fa fa-caret-down"></i>
@@ -676,13 +783,18 @@
         title="Draw polygon"
       >
         <span class="esri-icon-polygon"></span>
-      </div></div></div>
+        </div>
+        
+      </div></div>
       <div id="paneDiv" class="esri-widget">
         <div>
           <p>
-            Using the tools in the upper right corner, draw a shape on the map indicating the geographic extent of the hurricane damage.
+            Hurricane DST
           </p>
         </div>
+      </div>
+      <div id="csvDiv" class="esri-widget esri-widget--button esri-interactive" title='Export CSV'>
+          <span class='esri-icon-download'></span>
       </div>
       <span id = "html"></span>
     </body>
