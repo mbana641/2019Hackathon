@@ -3,7 +3,7 @@ from arcgis.geometry import Geometry, project
 from arcgis.features import FeatureLayer
 from arcgis.geometry.filters import intersects
 import json
-gis=GIS("http://esrifederal.maps.arcgis.com", "MBanaski_Federal", "GeologyRocks9?")
+gis=GIS("http://esrifederal.maps.arcgis.com")
 svi = FeatureLayer("https://services3.arcgis.com/ZvidGQkLaDJxRSJ2/arcgis/rest/services/Overall_2014_Tracts/FeatureServer/1")
 severeStorm = FeatureLayer("https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/9")
 moderateStorm = FeatureLayer("https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NWS_Watches_Warnings_v1/FeatureServer/10")
